@@ -1,16 +1,11 @@
-# React + Vite
+1. Why is it dangerous to store passwords in plain text, and how does hashing prevent harm if the database is compromised?
+If passwords are stored in plain text, anyone who gets a copy of the database, through a leak, a backup, or a misconfigured Atlas cluster, can read every users password immediately. Because people reuse passwords, the damage spreads to their email, banking, and other accounts. Hashing with bcrypt is one-way, so the stored value cannot be reversed into the original password. Bcrypt also adds a unique salt and is deliberately slow, so an attacker must guess passwords one at a time at high cost instead of looking up a table of precomputed hashes.
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+2. The login endpoint returns the same error for "user not found" and "wrong password." Why is this better than giving specific messages?
+Specific messages let an attacker learn which emails are registered, a weakness called user enumeration. With a confirmed list of valid emails, they can focus password guessing, credential stuffing, or phishing on real accounts. A single generic Invalid credentials response reveals nothing about whether the email exists. Legitimate users lose very little, since they only need to recheck what they typed.
 
-Currently, two official plugins are available:
+3. In your own words, what does the middleware do on every protected request, and why is it better than putting token-checking code inside every route handler?
+The middleware runs before the route handler. It reads the Authorization header, checks that it starts with Bearer, and verifies the token's signature and expiry using JWT_SECRET. If the token is valid it attaches the decoded payload to req.user and calls next()`, and otherwise it stops the request with a 401. Keeping this in one reusable function means the security logic is written and fixed in a single place instead of being copied into every handler, where a forgotten or inconsistent check would leave a route exposed. Protecting a route then takes just adding requireAuth to it.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+4. What is one thing that could still go wrong in this system, and how would you address it in a real application?
+Token theft is a real risk: the JWT is a bearer token, so anyone who copies it can act as the user until it expires, and without HTTPS it can be read in transit. In a real application I would serve everything over HTTPS only, keep access tokens short-lived (the 1-hour expiry here is a start), and pair them with refresh tokens that can be revoked. I would also add rate limiting on auth/login to slow brute-force attacks and use a long random secret stored in a secrets manager rather than a plain .env file.
